@@ -1,4 +1,5 @@
 <launch>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find field_vis)/launch/default.rviz" required="true" />
     <node pkg="field_vis" name="field_vis" type="field_vis" output="screen">
         <param name="formation_type" value="1"/>
     </node>

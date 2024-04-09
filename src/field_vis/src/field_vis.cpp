@@ -87,16 +87,13 @@ void visDrones(const std::vector<Eigen::Vector2d>& drones)
         marker.points.push_back(pt);
     }
 
-    ros::Duration(2.0).sleep();
     pub_drones_.publish(marker);
 }
 
 void visObstacles(const std::vector<Eigen::Vector2d>& obss)
 {
-    // Create a marker array
     visualization_msgs::MarkerArray marker_array;
 
-    // Create a marker
     visualization_msgs::Marker marker;
     marker.header.frame_id = "map";
     marker.header.stamp = ros::Time::now();
@@ -113,7 +110,6 @@ void visObstacles(const std::vector<Eigen::Vector2d>& obss)
     marker.color.g = 0.00;
     marker.color.b = 1.00;
 
-    // Loop over all obstacles
     for (size_t i = 0; i < obss.size(); i++)
     {
         marker.id = i;
@@ -123,7 +119,6 @@ void visObstacles(const std::vector<Eigen::Vector2d>& obss)
         marker_array.markers.push_back(marker);
     }
 
-    ros::Duration(2.0).sleep();
     pub_obstacles_.publish(marker_array);
 }
 
@@ -179,7 +174,6 @@ void visESDF(const pcl::PointCloud<pcl::PointXYZI>& cloud)
     sensor_msgs::PointCloud2 cloud_msg;
     pcl::toROSMsg(cloud, cloud_msg);
 
-    // ros::Duration(2.0).sleep();
     pub_esdf_.publish(cloud_msg);
 }
 
@@ -230,7 +224,6 @@ void visFormationField(const pcl::PointCloud<pcl::PointXYZI>& cloud)
     sensor_msgs::PointCloud2 cloud_msg;
     pcl::toROSMsg(cloud, cloud_msg);
 
-    ros::Duration(2.0).sleep();
     pub_formation_field_.publish(cloud_msg);
 }
 
@@ -316,7 +309,7 @@ int main(int argc, char** argv)
     ROS_INFO("Hello! formation type: %d", formation_type);
 
     std::vector<Eigen::Vector2d> obss;
-    generateRandomObstacles(obss, 80);
+    generateRandomObstacles(obss, 150);
 
     std::vector<Eigen::Vector2d> drones;
     generateDrones(drones);
@@ -325,7 +318,7 @@ int main(int argc, char** argv)
     auto formation_field = calFormationField(drones);
 
     ROS_INFO("Start visualization...");
-    ros::Rate r(100);
+    ros::Rate r(0.5);
 
     while (ros::ok())
     {
