@@ -25,3 +25,6 @@ include_directories(
 
 add_executable(field_vis src/field_vis.cpp)
 target_link_libraries(field_vis ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(lbfgs_test src/lbfgs.cpp)
+target_link_libraries(lbfgs_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})

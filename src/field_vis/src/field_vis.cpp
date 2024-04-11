@@ -70,8 +70,9 @@ void visDrones(const std::vector<Eigen::Vector2d>& drones)
     marker.color.b = 0.0;
 
     geometry_msgs::Point pt;
-    for (auto& drone: drones)
-    {        
+    for (size_t i=0; i<drones.size()-1; ++i)
+    {
+        auto& drone = drones[i];        
         pt.z = 0.5;
         
         pt.x = drone(0) - 0.1; pt.y = drone(1) - 0.1;
@@ -86,6 +87,26 @@ void visDrones(const std::vector<Eigen::Vector2d>& drones)
         pt.x = drone(0) - 0.1; pt.y = drone(1) + 0.1;
         marker.points.push_back(pt);
     }
+
+    pub_drones_.publish(marker);
+
+    auto& drone = drones[drones.size()-1];
+    marker.points.clear();
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.id = 1;
+
+    pt.x = drone(0) - 0.1; pt.y = drone(1) - 0.1;
+    marker.points.push_back(pt);
+
+    pt.x = drone(0) + 0.1; pt.y = drone(1) - 0.1;
+    marker.points.push_back(pt);
+
+    pt.x = drone(0) + 0.1; pt.y = drone(1) + 0.1;
+    marker.points.push_back(pt);
+
+    pt.x = drone(0) - 0.1; pt.y = drone(1) + 0.1;
+    marker.points.push_back(pt);
 
     pub_drones_.publish(marker);
 }
@@ -130,7 +151,7 @@ pcl::PointCloud<pcl::PointXYZI> calESDF(const std::vector<Eigen::Vector2d>& obss
     const double min_dist = -obstacle_radius; 
     const double max_dist = 5.0;
 
-    double step = 0.1;
+    double step = 0.01;
 
     for (double x = -10.0; x <= 10.0; x += step)
     {
@@ -155,7 +176,7 @@ pcl::PointCloud<pcl::PointXYZI> calESDF(const std::vector<Eigen::Vector2d>& obss
             }
             pt.x = x;
             pt.y = y;
-            pt.z = -dist;
+            pt.z = 0.0;
             pt.intensity = (dist - min_dist) / (max_dist - min_dist);
             cloud.push_back(pt);
         }
@@ -177,8 +198,26 @@ void visESDF(const pcl::PointCloud<pcl::PointXYZI>& cloud)
     pub_esdf_.publish(cloud_msg);
 }
 
+double gaussian(const double& sigma, const double& mu, const double& x)
+{
+    const double b = 1/(sqrt(2*M_PI)*sigma);
+    const double a = -pow((x-mu), 2)/(2*pow(sigma, 2));
+    return b*exp(a);
+}
+
+double f(const double& x, const double& y)
+{
+    double g_x = gaussian(1.1, 0, x);
+    return pow((y+2*g_x), 2) * pow((y-2*g_x), 2);
+}
+
 pcl::PointCloud<pcl::PointXYZI> calFormationField(std::vector<Eigen::Vector2d> drones)
 {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+  
+    std::uniform_real_distribution<double> dis(-0.5, 0.5);
+
     Eigen::MatrixXd L_des;
     graphCal(drones, L_des);
 
@@ -188,23 +227,33 @@ pcl::PointCloud<pcl::PointXYZI> calFormationField(std::vector<Eigen::Vector2d> d
     double min_dist = std::numeric_limits<double>::max(); 
     double max_dist = std::numeric_limits<double>::min();
 
+    auto new_drones = drones;
+    // for (auto& drone:new_drones)
+    // {
+    //     drone(0) += dis(gen);
+    //     drone(1) += dis(gen);
+    // }
+
     double step = 0.01;
     for (double x = -formation_field_limit; x <= formation_field_limit; x += step)
         for (double y = -formation_field_limit; y <= formation_field_limit; y += step)
         {
             Eigen::MatrixXd L;
-            drones[drones.size()-1] = Eigen::Vector2d(x, y);
-            graphCal(drones, L);
+
+            new_drones[drones.size()-1] = Eigen::Vector2d(x, y);
+            graphCal(new_drones, L);
             double dist = similarityCal(L, L_des);
             
+            // std::cout << dist << std::endl;
             pt.x = x; 
             pt.y = y;
             pt.z = dist;
+            // pt.z = f(x, y) + 0.005 * pow((x-2), 2);
             cloud.push_back(pt);
             min_dist = std::min(min_dist, dist);
             max_dist = std::max(max_dist, dist);
         }
-    
+    max_dist = std::min(max_dist, 20.0);
     for (auto& pt: cloud.points)
     {
         pt.intensity = (pt.z - min_dist)/(max_dist-min_dist);        
@@ -310,6 +359,7 @@ int main(int argc, char** argv)
 
     std::vector<Eigen::Vector2d> obss;
     generateRandomObstacles(obss, 150);
+    obss.push_back(Eigen::Vector2d(-0.809, -0.588));
 
     std::vector<Eigen::Vector2d> drones;
     generateDrones(drones);
@@ -318,10 +368,11 @@ int main(int argc, char** argv)
     auto formation_field = calFormationField(drones);
 
     ROS_INFO("Start visualization...");
-    ros::Rate r(0.5);
+    ros::Rate r(0.3);
 
     while (ros::ok())
     {
+        formation_field = calFormationField(drones);
         visObstacles(obss);
         visESDF(esdf);
         visDrones(drones);
