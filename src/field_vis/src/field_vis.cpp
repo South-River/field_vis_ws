@@ -228,11 +228,11 @@ pcl::PointCloud<pcl::PointXYZI> calFormationField(std::vector<Eigen::Vector2d> d
     double max_dist = std::numeric_limits<double>::min();
 
     auto new_drones = drones;
-    // for (auto& drone:new_drones)
-    // {
-    //     drone(0) += dis(gen);
-    //     drone(1) += dis(gen);
-    // }
+    for (auto& drone:new_drones)
+    {
+        drone(0) += dis(gen);
+        drone(1) += dis(gen);
+    }
 
     double step = 0.01;
     for (double x = -formation_field_limit; x <= formation_field_limit; x += step)
